@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>☕ Tea Round Picker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --accent1: #e94560;
+    --accent2: #f5a623;
+    --accent3: #0f3460;
+    --text: #eaeaea;
+    --glow: rgba(233, 69, 96, 0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(233,69,96,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(245,166,35,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    letter-spacing: 2px;
+    margin-bottom: 0.3rem;
+    background: linear-gradient(135deg, var(--accent2), var(--accent1));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    opacity: 0.5;
+    margin-bottom: 2rem;
+    text-align: center;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .wheel-container {
+    position: relative;
+    width: min(480px, 90vw);
+    height: min(480px, 90vw);
+    margin-bottom: 2rem;
+  }
+
+  .pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 36px solid var(--accent1);
+    z-index: 10;
+    filter: drop-shadow(0 0 8px var(--glow));
+  }
+
+  canvas {
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(233,69,96,0.3), 0 0 120px rgba(233,69,96,0.1);
+    display: block;
+  }
+
+  .spin-btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    padding: 1rem 3rem;
+    background: linear-gradient(135deg, var(--accent1), #c0392b);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.5);
+    text-transform: uppercase;
+  }
+
+  .spin-btn:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 30px rgba(233,69,96,0.7);
+  }
+
+  .spin-btn:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .spin-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Result overlay */
+  .result-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 20, 0.92);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    backdrop-filter: blur(6px);
+  }
+
+  .result-overlay.show {
+    display: flex;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .tea-emoji {
+    font-size: clamp(4rem, 15vw, 8rem);
+    animation: bounce 0.6s ease infinite alternate;
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-15px); }
+  }
+
+  .result-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(4rem, 16vw, 10rem);
+    background: linear-gradient(135deg, var(--accent2), var(--accent1));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .result-msg {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.3rem, 4vw, 2.2rem);
+    color: var(--accent2);
+    letter-spacing: 2px;
+    margin-bottom: 2.5rem;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s both;
+  }
+
+  .again-btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    padding: 0.8rem 2.5rem;
+    background: transparent;
+    color: var(--text);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .again-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.6);
+    transform: scale(1.05);
+  }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    z-index: 200;
+    animation: fall linear forwards;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<h1>☕ Tea Round Roulette</h1>
+<p class="subtitle">Spin to find today's brew crew</p>
+
+<div class="wheel-container">
+  <div class="pointer"></div>
+  <canvas id="wheelCanvas"></canvas>
+</div>
+
+<button class="spin-btn" id="spinBtn" onclick="spin()">SPIN!</button>
+
+<div class="result-overlay" id="resultOverlay">
+  <span class="tea-emoji">☕</span>
+  <div class="result-name" id="resultName"></div>
+  <div class="result-msg">TIME TO DO A TEA RUN</div>
+  <button class="again-btn" onclick="closeResult()">Spin Again</button>
+</div>
+
+<script>
+  const names = [
+    "Owen","Nathan","Stan","Harry","Cameron",
+    "Grace","Oliver","Alex","Vicky","Shaunna",
+    "Charlotte","Anna","Leo"
+  ];
+
+  // The chosen one (always)
+  const TARGET = "Leo";
+  const targetIndex = names.indexOf(TARGET);
+
+  const COLORS = [
+    "#e94560","#f5a623","#0f9b8e","#8e44ad","#2980b9",
+    "#27ae60","#d35400","#c0392b","#16a085","#8e44ad",
+    "#2c3e50","#f39c12","#1abc9c"
+  ];
+
+  const canvas = document.getElementById("wheelCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    const size = Math.min(480, window.innerWidth * 0.9);
+    canvas.width = size;
+    canvas.height = size;
+    drawWheel(currentAngle);
+  }
+
+  let currentAngle = 0;
+  let isSpinning = false;
+
+  function drawWheel(rotation) {
+    const w = canvas.width, h = canvas.height;
+    const cx = w / 2, cy = h / 2;
+    const r = w / 2 - 4;
+    const sliceAngle = (2 * Math.PI) / names.length;
+
+    ctx.clearRect(0, 0, w, h);
+
+    names.forEach((name, i) => {
+      const startAngle = rotation + i * sliceAngle;
+      const endAngle = startAngle + sliceAngle;
+
+      // Slice
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Text
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(startAngle + sliceAngle / 2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      const fontSize = Math.max(10, Math.min(15, r * 0.09));
+      ctx.font = `bold ${fontSize}px Nunito, sans-serif`;
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 4;
+      ctx.fillText(name, r - 12, fontSize * 0.4);
+      ctx.restore();
+    });
+
+    // Center cap
+    ctx.beginPath();
+    ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7, 0, 2 * Math.PI);
+    ctx.fillStyle = "#e94560";
+    ctx.fill();
+  }
+
+  function spin() {
+    if (isSpinning) return;
+    isSpinning = true;
+    document.getElementById("spinBtn").disabled = true;
+
+    const sliceAngle = (2 * Math.PI) / names.length;
+
+    // Pointer is at top (- Math.PI/2). We want targetIndex slice to be under it.
+    // The center of slice i is at: currentAngle + i*sliceAngle + sliceAngle/2
+    // We need: (finalAngle + targetIndex*sliceAngle + sliceAngle/2) mod 2PI = 3PI/2  (top = -PI/2 = 3PI/2)
+    // finalAngle = 3PI/2 - targetIndex*sliceAngle - sliceAngle/2 - currentAngle  (mod 2PI)
+
+    const pointerAngle = 3 * Math.PI / 2;
+    let targetRaw = pointerAngle - targetIndex * sliceAngle - sliceAngle / 2;
+
+    // Normalise to 0..2PI
+    targetRaw = ((targetRaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+    // Add many full rotations for drama (8-12 full spins)
+    const extraSpins = 8 + Math.floor(Math.random() * 4);
+    const totalRotation = extraSpins * 2 * Math.PI + targetRaw - (currentAngle % (2 * Math.PI));
+    const finalAngle = currentAngle + totalRotation;
+
+    // Duration: 5-7 seconds for suspense
+    const duration = 5500 + Math.random() * 1500;
+    const startAngle = currentAngle;
+    const startTime = performance.now();
+
+    function easeOut(t) {
+      // Cubic ease-out with a slight wobble at the end for realism
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function animate(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOut(progress);
+
+      currentAngle = startAngle + totalRotation * eased;
+      drawWheel(currentAngle);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        currentAngle = finalAngle;
+        drawWheel(currentAngle);
+        isSpinning = false;
+        setTimeout(showResult, 400);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  function showResult() {
+    document.getElementById("resultName").textContent = TARGET;
+    document.getElementById("resultOverlay").classList.add("show");
+    spawnConfetti();
+  }
+
+  function closeResult() {
+    document.getElementById("resultOverlay").classList.remove("show");
+    document.getElementById("spinBtn").disabled = false;
+    // Remove confetti
+    document.querySelectorAll(".confetti-piece").forEach(e => e.remove());
+  }
+
+  function spawnConfetti() {
+    const colors = ["#e94560","#f5a623","#27ae60","#2980b9","#8e44ad","#f39c12","#fff"];
+    for (let i = 0; i < 100; i++) {
+      setTimeout(() => {
+        const el = document.createElement("div");
+        el.className = "confetti-piece";
+        el.style.left = Math.random() * 100 + "vw";
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.width = (6 + Math.random() * 10) + "px";
+        el.style.height = (6 + Math.random() * 10) + "px";
+        el.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+        const dur = 2 + Math.random() * 2;
+        el.style.animation = `fall ${dur}s linear forwards`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), dur * 1000);
+      }, i * 30);
+    }
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+</script>
+</body>
+</html>
